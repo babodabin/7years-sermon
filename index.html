@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#183b2a">
+  <meta name="theme-color" content="#144835">
+  <meta name="app-version" content="2026-08-07-v4">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="7년 말씀">
   <title>7년 말씀</title>
+  <link rel="apple-touch-icon" href="./app-icon.png?v=8">
+  <link rel="icon" type="image/png" href="./app-icon.png?v=8">
   <style>
     :root {
       color-scheme: light dark;
@@ -281,7 +284,7 @@
   <main>
     <section class="overall card">
       <div class="progress-copy">
-        <strong id="overallText">0 / 0 들음</strong>
+        <strong id="overallText">목록 불러오는 중…</strong>
         <span id="dataMode">목록 준비 중</span>
       </div>
       <div class="trackbar"><span id="overallBar"></span></div>
@@ -298,7 +301,7 @@
     <section class="year-summary card">
       <div class="year-summary-head">
         <h2 id="yearTitle">1년</h2>
-        <p id="yearProgressText">0 / 0 들음</p>
+        <p id="yearProgressText">불러오는 중…</p>
       </div>
       <div class="trackbar"><span id="yearBar"></span></div>
     </section>
@@ -368,8 +371,16 @@
       openCategories: "yullin7.openCategories.v2",
       openGroups: "yullin7.openGroups.v2"
     };
+    
+    const EXPECTED_YEAR_COUNTS = {1:91, 2:105, 3:77, 4:74, 5:62, 6:48, 7:39};
+    const EXPECTED_TOTAL = 496;
+
     const CATEGORY_ORDER = {"기본":1, "실천":2, "상황":3};
     const CATEGORY_LABEL = {"기본":"기본", "실천":"실천", "상황":"상황"};
+    const PLAY_TITLE_ALIASES = {
+      "한사람의 죄(1)": "한-사람의-죄-1",
+      "한사람의 죄(2)": "한-사람의-죄-2"
+    };
 
     const state = {
       sermons: [],
@@ -444,6 +455,7 @@
           id:String(item.guid || item.id || `${title}|${index}`),
           title,
           sermonTitle:cleanTitle(title),
+          playTitle:String(item.playTitle || PLAY_TITLE_ALIASES[cleanTitle(title)] || cleanTitle(title)),
           description:stripHtml(item.description || item.content || ""),
           series:stripHtml(item.series || "") || inferSeries(item.description || item.content || "", title),
           duration:durationText(item.duration || item["itunes:duration"] || ""),
@@ -482,7 +494,7 @@
       showToast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
     }
     async function loadInitial() {
-      $("#dataMode").textContent = "7년 전체 목록 정리 중…";
+      $("#dataMode").textContent = "496개 전체 목록 정리 중…";
       $("#starterNotice").classList.add("hidden");
 
       const saved = localStorage.getItem(STORAGE.data);
@@ -496,6 +508,13 @@
             render();
           }
         } catch {}
+      }
+
+      if (state.sermons.length < 400) {
+        state.sermons = prepare(window.SERMON_DATA || []);
+        $("#dataMode").textContent = `496개 전체 목록 불러오는 중…`;
+        ensureValidYear();
+        render();
       }
 
       try {
@@ -602,10 +621,90 @@
       }
       return [...found.values()];
     }
+
+    function parsePodcastAppPage(rawText) {
+      const decoded = String(rawText || "")
+        .replace(/&amp;/g,"&")
+        .replace(/&lt;/g,"<")
+        .replace(/&gt;/g,">")
+        .replace(/&#39;/g,"'")
+        .replace(/&quot;/g,'"');
+
+      const pattern = /([1-7]년-(?:기본|실천|상황)-\d{1,2}-\d{1,2}\.[^\n\r\]<>]+)/g;
+      const found = new Map();
+
+      for (const m of decoded.matchAll(pattern)) {
+        let title = m[1]
+          .replace(/\s+image\b.*$/i,"")
+          .replace(/\s+(?:Play|Listen Later).*$/i,"")
+          .replace(/\s{2,}.*$/,"")
+          .trim();
+
+        if (!title || found.has(title)) continue;
+
+        const after = decoded.slice(m.index + m[0].length, m.index + m[0].length + 500);
+        let series = "";
+        const seriesMatch = after.match(/\n+([^\n\r]{2,120})/);
+        if (seriesMatch) {
+          const candidate = seriesMatch[1]
+            .replace(/^\s*[-*#>\[\]()0-9.]+\s*/,"")
+            .replace(/\]\([^)]*\)/g,"")
+            .trim();
+          if (!/^(?:image|Play|Listen Later|March|April|January|February|May|June|July|August|September|October|November|December)/i.test(candidate)) {
+            series = candidate.replace(/\s+\d+\s*-\s*.*$/,"").trim();
+          }
+        }
+
+        let duration = "";
+        const d = after.match(/(\d+h\s*\d*m|\d+h|\d+min|\d+m)\b/i);
+        if (d) duration = d[1];
+
+        found.set(title, {
+          id:title,
+          guid:title,
+          title,
+          series,
+          description:series,
+          duration,
+          pubDate:""
+        });
+      }
+      return [...found.values()];
+    }
+
+    async function getPodcastAppFullList() {
+      const base = "https://podcast.app/yeolringyohoe_7nyeongan-deuleoya-hal-malsseumsirijeu-p162487";
+      const all = new Map();
+
+      // 한꺼번에 50개를 때리지 않고 5페이지씩 묶어서 순차 처리
+      for (let start=1; start<=50; start+=5) {
+        const pages = [];
+        for (let p=start; p<start+5 && p<=50; p++) {
+          const target = `${base}?page=${p}`;
+          const jina = `https://r.jina.ai/http://${target.replace(/^https?:\/\//,"")}`;
+          pages.push(
+            fetchText(jina, 45000)
+              .then(text => parsePodcastAppPage(text))
+              .catch(() => [])
+          );
+        }
+        const chunks = await Promise.all(pages);
+        chunks.flat().forEach(item => all.set(item.title, item));
+
+        // 충분히 모였으면 조기 종료
+        if (all.size >= EXPECTED_TOTAL) break;
+      }
+
+      const items = [...all.values()];
+      if (items.length < 400) throw new Error(`Podcast App 목록 ${items.length}개`);
+      return items;
+    }
+
     async function getFullList() {
       const encodedFeed = encodeURIComponent(SOURCE_FEED);
       const encodedShow = encodeURIComponent(SOURCE_SHOW);
       const attempts = [
+        async () => await getPodcastAppFullList(),
         async () => parseFeed(await fetchText(SOURCE_FEED)),
         async () => parseFeed(await fetchText(`https://api.allorigins.win/raw?url=${encodedFeed}`)),
         async () => {
@@ -657,7 +756,7 @@
       }
     }
     function ensureValidYear() {
-      // 1~7년 탭은 목록 데이터가 아직 비어 있어도 항상 열 수 있게 유지한다.
+      // 1~7년 탭은 해당 연도의 설교 데이터가 아직 비어 있어도 항상 열 수 있게 유지한다.
       if (!Number.isInteger(state.selectedYear) || state.selectedYear < 1 || state.selectedYear > 7) {
         state.selectedYear = 1;
         localStorage.setItem(STORAGE.selectedYear, state.selectedYear);
@@ -671,7 +770,7 @@
     }
     function play(item) {
       const shortcut = state.settings.shortcutName.trim() || "설교 재생";
-      location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcut)}&input=text&text=${encodeURIComponent(item.sermonTitle)}`;
+      location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcut)}&input=text&text=${encodeURIComponent(item.playTitle || item.sermonTitle)}`;
     }
     function itemMatchesFilter(item) {
       const heard = !!state.heard[item.id];
@@ -694,9 +793,10 @@
       nav.textContent = "";
       for (let year=1; year<=7; year++) {
         const p = progress(yearItems(year));
+        const shownTotal = state.sermons.length >= 400 ? p.total : (EXPECTED_YEAR_COUNTS[year] || p.total);
         const btn = document.createElement("button");
         btn.className = `year-button ${year === state.selectedYear ? "active" : ""}`;
-        btn.innerHTML = `<strong>${year}년</strong><small>${p.heard}/${p.total}</small>`;
+        btn.innerHTML = `<strong>${year}년</strong><small>${p.heard}/${shownTotal}</small>`;
         btn.addEventListener("click", () => {
           state.selectedYear = year;
           localStorage.setItem(STORAGE.selectedYear, year);
@@ -710,13 +810,15 @@
     }
     function renderProgress() {
       const overall = progress(state.sermons);
-      $("#overallText").textContent = `${overall.heard} / ${overall.total} 들음`;
-      $("#overallBar").style.width = `${overall.pct}%`;
+      const overallTotal = state.sermons.length >= 400 ? overall.total : EXPECTED_TOTAL;
+      $("#overallText").textContent = `${overall.heard} / ${overallTotal} 들음`;
+      $("#overallBar").style.width = `${overallTotal ? overall.heard/overallTotal*100 : 0}%`;
 
       const yp = progress(yearItems(state.selectedYear));
+      const yearTotal = state.sermons.length >= 400 ? yp.total : (EXPECTED_YEAR_COUNTS[state.selectedYear] || yp.total);
       $("#yearTitle").textContent = `${state.selectedYear}년`;
-      $("#yearProgressText").textContent = `${yp.heard} / ${yp.total} 들음`;
-      $("#yearBar").style.width = `${yp.pct}%`;
+      $("#yearProgressText").textContent = `${yp.heard} / ${yearTotal} 들음`;
+      $("#yearBar").style.width = `${yearTotal ? yp.heard/yearTotal*100 : 0}%`;
     }
     function renderContent() {
       const allYear = yearItems(state.selectedYear);
@@ -850,7 +952,6 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       $("#shortcutName").value = state.settings.shortcutName;
-      render();
       await loadInitial();
 
       $("#searchInput").addEventListener("input", e => { state.search = e.target.value; renderContent(); });
