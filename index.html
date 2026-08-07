@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="7년 말씀">
   <title>7년 말씀</title>
+  <link rel="apple-touch-icon" href="./app-icon.png?v=3">
+  <link rel="icon" type="image/png" href="./app-icon.png?v=3">
   <style>
     :root {
       color-scheme: light dark;
@@ -281,7 +283,7 @@
   <main>
     <section class="overall card">
       <div class="progress-copy">
-        <strong id="overallText">0 / 0 들음</strong>
+        <strong id="overallText">목록 불러오는 중…</strong>
         <span id="dataMode">목록 준비 중</span>
       </div>
       <div class="trackbar"><span id="overallBar"></span></div>
@@ -298,7 +300,7 @@
     <section class="year-summary card">
       <div class="year-summary-head">
         <h2 id="yearTitle">1년</h2>
-        <p id="yearProgressText">0 / 0 들음</p>
+        <p id="yearProgressText">불러오는 중…</p>
       </div>
       <div class="trackbar"><span id="yearBar"></span></div>
     </section>
@@ -501,6 +503,13 @@
             render();
           }
         } catch {}
+      }
+
+      if (state.sermons.length < 400) {
+        state.sermons = prepare(window.SERMON_DATA || []);
+        $("#dataMode").textContent = `${state.sermons.length}개 임시 목록 · 전체 목록 연결 중…`;
+        ensureValidYear();
+        render();
       }
 
       try {
@@ -855,7 +864,6 @@
 
     document.addEventListener("DOMContentLoaded", async () => {
       $("#shortcutName").value = state.settings.shortcutName;
-      render();
       await loadInitial();
 
       $("#searchInput").addEventListener("input", e => { state.search = e.target.value; renderContent(); });
