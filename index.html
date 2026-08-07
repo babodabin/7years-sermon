@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#144835">
-  <meta name="app-version" content="2026-08-07-v11">
+  <meta name="app-version" content="2026-08-07-v12">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="7년 말씀">
   <title>7년 말씀</title>
-  <link rel="apple-touch-icon" href="./app-icon.png?v=11">
-  <link rel="icon" type="image/png" href="./app-icon.png?v=11">
+  <link rel="apple-touch-icon" href="./app-icon.png?v=12">
+  <link rel="icon" type="image/png" href="./app-icon.png?v=12">
   <style>
     :root {
       color-scheme: light dark;
@@ -364,7 +364,7 @@
     const SOURCE_FEED = "https://feeds.feedburner.com/_7";
     const SOURCE_SHOW = "https://fountain.fm/show/Ghd9kBuIOQz94khjE9Kh/episodes";
     const STORAGE = {
-      data: "yullin7.data.v3",
+      data: "yullin7.data.v4",
       heard: "yullin7.heard.v1",
       settings: "yullin7.settings.v1",
       selectedYear: "yullin7.selectedYear.v2",
@@ -483,7 +483,7 @@
           sermonTitle:cleanTitle(title),
           // 화면에는 짧은 설교 제목만 표시한다.
           // 단축어에는 같은 제목에서 띄어쓰기를 뺀 검색어를 넘긴다.
-          playTitle:String(item.playTitle || PLAY_TITLE_ALIASES[cleanTitle(title)] || cleanTitle(title).replace(/\s+/g,"")),
+          playTitle:String(item.playTitle || cleanTitle(title).replace(/\s+/g,"")),
           description:stripHtml(item.description || item.content || ""),
           series:(() => {
             const rawSeries = stripHtml(item.series || "");
@@ -533,7 +533,7 @@
       if (saved) {
         try {
           const cached = prepare(JSON.parse(saved));
-          if (cached.length >= 400) {
+          if (cached.length >= EXPECTED_TOTAL) {
             state.sermons = cached;
             $("#dataMode").textContent = `${state.sermons.length}개 목록 · 저장됨`;
             ensureValidYear();
@@ -542,7 +542,7 @@
         } catch {}
       }
 
-      if (state.sermons.length < 400) {
+      if (state.sermons.length < EXPECTED_TOTAL) {
         state.sermons = prepare(window.SERMON_DATA || []);
         $("#dataMode").textContent = `496개 전체 목록 불러오는 중…`;
         ensureValidYear();
@@ -552,7 +552,7 @@
       try {
         const items = await getFullList();
         const prepared = prepare(items);
-        if (prepared.length < 400) throw new Error(`목록이 ${prepared.length}개`);
+        if (prepared.length < EXPECTED_TOTAL) throw new Error(`목록이 ${prepared.length}개`);
         state.sermons = prepared;
         localStorage.setItem(STORAGE.data, JSON.stringify(items));
         $("#dataMode").textContent = `${state.sermons.length}개 목록 · 정리 완료`;
@@ -564,7 +564,7 @@
         console.error("full list load failed", error);
       }
 
-      if (state.sermons.length >= 400) {
+      if (state.sermons.length >= EXPECTED_TOTAL) {
         $("#dataMode").textContent = `${state.sermons.length}개 목록 · 저장본`;
         return true;
       }
@@ -707,28 +707,50 @@
       const base = "https://podcast.app/yeolringyohoe_7nyeongan-deuleoya-hal-malsseumsirijeu-p162487";
       const all = new Map();
 
-      // 한꺼번에 50개를 때리지 않고 5페이지씩 묶어서 순차 처리
-      for (let start=1; start<=50; start+=5) {
-        const pages = [];
-        for (let p=start; p<start+5 && p<=50; p++) {
-          const target = `${base}?page=${p}`;
-          const jina = `https://r.jina.ai/http://${target.replace(/^https?:\/\//,"")}`;
-          pages.push(
-            fetchText(jina, 45000)
-              .then(text => parsePodcastAppPage(text))
-              .catch(() => [])
-          );
+      async function loadPage(p) {
+        const target = `${base}?page=${p}`;
+        const jina = `https://r.jina.ai/http://${target.replace(/^https?:\/\//,"")}`;
+        let lastError = null;
+        for (let attempt=1; attempt<=4; attempt++) {
+          try {
+            const text = await fetchText(jina, 60000);
+            const items = parsePodcastAppPage(text);
+            if (items.length) return items;
+            lastError = new Error(`페이지 ${p}: 제목 없음`);
+          } catch (e) {
+            lastError = e;
+          }
+          await new Promise(resolve => setTimeout(resolve, 450 * attempt));
         }
-        const chunks = await Promise.all(pages);
-        chunks.flat().forEach(item => all.set(item.title, item));
+        throw lastError || new Error(`페이지 ${p} 실패`);
+      }
 
-        // 충분히 모였으면 조기 종료
+      let emptyStreak = 0;
+      for (let p=1; p<=60; p++) {
+        try {
+          const items = await loadPage(p);
+          items.forEach(item => {
+            const t = extractCanonicalTitle(item.title || "");
+            if (/^[1-7]년-(?:기본|실천|상황)-\d+-\d+\./.test(t)) {
+              item.title = t;
+              if (!all.has(t)) all.set(t, item);
+            }
+          });
+          emptyStreak = 0;
+        } catch (e) {
+          console.warn("목록 페이지 재시도 후 실패", p, e);
+          emptyStreak++;
+        }
+
         if (all.size >= EXPECTED_TOTAL) break;
+        if (p > 50 && emptyStreak >= 5) break;
       }
 
       const items = [...all.values()];
-      if (items.length < 400) throw new Error(`Podcast App 목록 ${items.length}개`);
-      return items;
+      if (items.length < EXPECTED_TOTAL) {
+        throw new Error(`원래 496개 중 ${items.length}개만 확보`);
+      }
+      return items.slice(0, EXPECTED_TOTAL);
     }
 
     async function getFullList() {
@@ -754,7 +776,7 @@
         try {
           const items = await attempt();
           const valid = items.filter(item => /^[1-7]년-(?:기본|실천|상황)-\d+-\d+/.test(stripHtml(item.title || "")));
-          if (valid.length >= 400) return valid;
+          if (valid.length >= EXPECTED_TOTAL) return valid.slice(0, EXPECTED_TOTAL);
           failures.push(`항목 ${valid.length}개`);
         } catch (error) {
           failures.push(String(error?.message || error));
@@ -769,7 +791,7 @@
       try {
         const items = await getFullList();
         const prepared = prepare(items);
-        if (prepared.length < 400) throw new Error(`목록이 ${prepared.length}개`);
+        if (prepared.length < EXPECTED_TOTAL) throw new Error(`목록이 ${prepared.length}개`);
         localStorage.setItem(STORAGE.data, JSON.stringify(items));
         state.sermons = prepared;
         $("#dataMode").textContent = `${state.sermons.length}개 목록 · 정리 완료`;
@@ -787,7 +809,6 @@
       }
     }
     function ensureValidYear() {
-      // 1~7년 탭은 설교 데이터 유무와 관계없이 항상 선택할 수 있다.
       if (!Number.isInteger(state.selectedYear) || state.selectedYear < 1 || state.selectedYear > 7) {
         state.selectedYear = 1;
         localStorage.setItem(STORAGE.selectedYear, state.selectedYear);
