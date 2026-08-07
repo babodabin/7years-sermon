@@ -378,8 +378,7 @@
     const CATEGORY_ORDER = {"기본":1, "실천":2, "상황":3};
     const CATEGORY_LABEL = {"기본":"기본", "실천":"실천", "상황":"상황"};
     const PLAY_TITLE_ALIASES = {
-      "한사람의 죄(1)": "한-사람의-죄-1",
-      "한사람의 죄(2)": "한-사람의-죄-2"
+      "한사람의 죄": "한사람의죄"
     };
 
     const state = {
@@ -406,7 +405,13 @@
       return (doc.body.textContent || "").replace(/\s+/g," ").trim();
     }
     function cleanTitle(full="") {
-      return full.replace(/^\s*\d+년-[^-]+-\d+-\d+\s*[.\-]\s*/,"").trim();
+      return String(full || "")
+        .replace(/^\s*[*#_~`>\-–—]+\s*/,"")
+        .replace(/^\s*\d+년-[^-]+-\d+-\d+\s*[.\-]\s*/,"")
+        .replace(/^\s*[*#_~`>\-–—]+\s*/,"")
+        .replace(/\s*[（(]\s*\d+\s*[)）]\s*$/,"")
+        .replace(/\s+/g," ")
+        .trim();
     }
     function codeFromTitle(title="") {
       const m = title.match(/^(\d+)년-([^-]+)-(\d+)-(\d+)/);
@@ -455,11 +460,15 @@
           id:String(item.guid || item.id || `${title}|${index}`),
           title,
           sermonTitle:cleanTitle(title),
-          // 화면 표시용 제목은 sermonTitle 그대로.
-          // 단축어 검색어는 별도 playTitle로 분리한다.
-          playTitle:String(item.playTitle || PLAY_TITLE_ALIASES[cleanTitle(title)] || cleanTitle(title)),
+          // 화면에는 짧은 설교 제목만 표시한다.
+          // 단축어에는 같은 제목에서 띄어쓰기를 뺀 검색어를 넘긴다.
+          playTitle:String(item.playTitle || PLAY_TITLE_ALIASES[cleanTitle(title)] || cleanTitle(title).replace(/\s+/g,"")),
           description:stripHtml(item.description || item.content || ""),
-          series:stripHtml(item.series || "") || inferSeries(item.description || item.content || "", title),
+          series:(() => {
+            const rawSeries = stripHtml(item.series || "");
+            if (/^열린교회_?7년간\s*들어야\s*할\s*말씀시리즈$/i.test(rawSeries)) return "";
+            return rawSeries || inferSeries(item.description || item.content || "", title);
+          })(),
           duration:durationText(item.duration || item["itunes:duration"] || ""),
           pubDate:item.pubDate || item.published || "",
           code
@@ -608,6 +617,7 @@
         const title = match[1]
           .replace(/\s+image\b.*$/i,"")
           .replace(/\s+(?:Play|Listen Later).*$/i,"")
+          .replace(/^\s*[*#_~`>\-–—]+\s*/,"")
           .replace(/\s{2,}.*$/,"")
           .trim();
         if (title && !found.has(title)) {
@@ -639,6 +649,7 @@
         let title = m[1]
           .replace(/\s+image\b.*$/i,"")
           .replace(/\s+(?:Play|Listen Later).*$/i,"")
+          .replace(/^\s*[*#_~`>\-–—]+\s*/,"")
           .replace(/\s{2,}.*$/,"")
           .trim();
 
@@ -868,7 +879,10 @@
           const groupKey = `${state.selectedYear}|${category}|${groupNumber}`;
           if (!localStorage.getItem(STORAGE.openGroups) && catIndex === 0 && groupIndex === 0) state.openGroups.add(groupKey);
           const gp = progress(allGroup);
-          const title = allGroup[0]?.series || `${groupNumber}번 묶음`;
+          const rawGroupTitle = allGroup[0]?.series || "";
+          const title = (/^열린교회_?7년간\s*들어야\s*할\s*말씀시리즈$/i.test(rawGroupTitle) || !rawGroupTitle)
+            ? `${groupNumber}번 묶음`
+            : rawGroupTitle;
 
           const group = document.createElement("section");
           group.className = `group ${state.openGroups.has(groupKey) ? "open" : ""}`;
