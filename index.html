@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#144835">
-  <meta name="app-version" content="2026-08-07-v13-static496">
+  <meta name="app-version" content="2026-08-07-v14-static496-shortcut">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="7년 말씀">
@@ -333,7 +333,7 @@
         <label class="file-button">청취기록 가져오기<input id="importInput" type="file" accept="application/json"></label>
         <button id="resetButton" type="button" class="danger">들음 기록 전부 지우기</button>
       </div>
-      <p class="fineprint">496개 제목과 들음 기록은 앱에서 관리한다. ▶ 버튼만 Apple Music 제목 검색으로 연결된다.</p>
+      <p class="fineprint">496개 제목과 들음 기록은 앱에서 관리한다. ▶ 버튼은 ‘설교 재생’ 단축어에 설교 제목을 전달한다.</p>
     </form>
   </dialog>
 
@@ -461,7 +461,7 @@
           title,
           sermonTitle:cleanTitle(title),
           // 화면에는 짧은 설교 제목만 표시한다.
-          // ▶ 버튼은 설교 제목으로 Apple Music 검색을 연다.
+          // ▶ 버튼은 설교 제목을 ‘설교 재생’ 단축어에 전달한다.
           playTitle:String(item.playTitle || cleanTitle(title)),
           description:stripHtml(item.description || item.content || ""),
           series:(() => {
@@ -573,10 +573,10 @@
       render();
     }
     function play(item) {
-      const query = (item.sermonTitle || cleanTitle(item.title) || "").trim();
+      const shortcut = "설교 재생";
+      const query = (item.playTitle || item.sermonTitle || cleanTitle(item.title) || "").trim();
       if (!query) return;
-      const url = `https://music.apple.com/kr/search?term=${encodeURIComponent(query)}`;
-      window.location.href = url;
+      location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcut)}&input=text&text=${encodeURIComponent(query)}`;
     }
     function itemMatchesFilter(item) {
       const heard = !!state.heard[item.id];
