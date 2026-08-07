@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#144835">
-  <meta name="app-version" content="2026-08-07-v4">
+  <meta name="app-version" content="2026-08-07-v11">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="7년 말씀">
   <title>7년 말씀</title>
-  <link rel="apple-touch-icon" href="./app-icon.png?v=10">
-  <link rel="icon" type="image/png" href="./app-icon.png?v=10">
+  <link rel="apple-touch-icon" href="./app-icon.png?v=11">
+  <link rel="icon" type="image/png" href="./app-icon.png?v=11">
   <style>
     :root {
       color-scheme: light dark;
@@ -320,7 +320,7 @@
     </section>
 
     <section id="categoryList" class="category-list" aria-live="polite"></section>
-    <p id="emptyState" class="empty hidden">이 조건에 맞는 설교가 없다.</p>
+    <p id="emptyState" class="empty hidden">등록된 설교 제목이 없다.</p>
   </main>
 
   <dialog id="settingsDialog">
@@ -364,7 +364,7 @@
     const SOURCE_FEED = "https://feeds.feedburner.com/_7";
     const SOURCE_SHOW = "https://fountain.fm/show/Ghd9kBuIOQz94khjE9Kh/episodes";
     const STORAGE = {
-      data: "yullin7.data.v1",
+      data: "yullin7.data.v3",
       heard: "yullin7.heard.v1",
       settings: "yullin7.settings.v1",
       selectedYear: "yullin7.selectedYear.v2",
@@ -403,6 +403,27 @@
     function stripHtml(value="") {
       const doc = new DOMParser().parseFromString(String(value), "text/html");
       return (doc.body.textContent || "").replace(/\s+/g," ").trim();
+    }
+
+    function extractCanonicalTitle(value="") {
+      const text = stripHtml(value)
+        .replace(/\[Image\s*\d+\s*:[\s\S]*$/i, "")
+        .replace(/\bimage\s*\d*\b.*$/i, "")
+        .trim();
+
+      // If the real 7-year code appears anywhere inside scraped junk, keep only that.
+      const coded = text.match(/([1-7]년-(?:기본|실천|상황)-\d{1,2}-\d{1,2}\.[^\[\]\n\r]+)/);
+      if (coded) {
+        return coded[1]
+          .replace(/\s*["')!]+$/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      // Generic show-title/card/image garbage is not a sermon row.
+      if (/열린교회[_\s-]*7년간\s*들어야\s*할\s*말씀시리즈/i.test(text)) return "";
+      if (/^\*+$/.test(text)) return "";
+      return text;
     }
     function cleanTitle(full="") {
       return String(full || "")
@@ -454,7 +475,7 @@
     }
     function prepare(items) {
       const clean = items.map((item,index) => {
-        const title = stripHtml(item.title || "");
+        const title = extractCanonicalTitle(item.title || "");
         const code = codeFromTitle(title);
         return {
           id:String(item.guid || item.id || `${title}|${index}`),
@@ -473,7 +494,7 @@
           pubDate:item.pubDate || item.published || "",
           code
         };
-      }).filter(x => x.title && x.code.year >= 1 && x.code.year <= 7);
+      }).filter(x => x.title && x.code.year >= 1 && x.code.year <= 7 && !/열린교회[_\s-]*7년간\s*들어야\s*할\s*말씀시리즈/i.test(x.title) && !/\[Image\s*\d+/i.test(x.title));
 
       clean.sort((a,b) =>
         a.code.year - b.code.year ||
@@ -646,11 +667,8 @@
       const found = new Map();
 
       for (const m of decoded.matchAll(pattern)) {
-        let title = m[1]
-          .replace(/\s+image\b.*$/i,"")
+        let title = extractCanonicalTitle(m[1])
           .replace(/\s+(?:Play|Listen Later).*$/i,"")
-          .replace(/^\s*[*#_~`>\-–—]+\s*/,"")
-          .replace(/\s{2,}.*$/,"")
           .trim();
 
         if (!title || found.has(title)) continue;
@@ -879,7 +897,10 @@
           const groupKey = `${state.selectedYear}|${category}|${groupNumber}`;
           if (!localStorage.getItem(STORAGE.openGroups) && catIndex === 0 && groupIndex === 0) state.openGroups.add(groupKey);
           const gp = progress(allGroup);
-          const rawGroupTitle = allGroup[0]?.series || "";
+          const rawGroupTitle = (allGroup[0]?.series || "")
+            .replace(/\[Image\s*\d+\s*:.*/i,"")
+            .replace(/열린교회[_\s-]*7년간\s*들어야\s*할\s*말씀시리즈.*$/i,"")
+            .trim();
           const title = (/^열린교회_?7년간\s*들어야\s*할\s*말씀시리즈$/i.test(rawGroupTitle) || !rawGroupTitle)
             ? `${groupNumber}번 묶음`
             : rawGroupTitle;
