@@ -9,8 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="7년 말씀">
   <title>7년 말씀</title>
-  <link rel="apple-touch-icon" href="./app-icon.png?v=9">
-  <link rel="icon" type="image/png" href="./app-icon.png?v=9">
+  <link rel="apple-touch-icon" href="./app-icon.png?v=10">
+  <link rel="icon" type="image/png" href="./app-icon.png?v=10">
   <style>
     :root {
       color-scheme: light dark;
@@ -320,7 +320,7 @@
     </section>
 
     <section id="categoryList" class="category-list" aria-live="polite"></section>
-    <p id="emptyState" class="empty hidden">이 연도에는 등록된 설교가 없다.</p>
+    <p id="emptyState" class="empty hidden">이 조건에 맞는 설교가 없다.</p>
   </main>
 
   <dialog id="settingsDialog">
@@ -455,6 +455,8 @@
           id:String(item.guid || item.id || `${title}|${index}`),
           title,
           sermonTitle:cleanTitle(title),
+          // 화면 표시용 제목은 sermonTitle 그대로.
+          // 단축어 검색어는 별도 playTitle로 분리한다.
           playTitle:String(item.playTitle || PLAY_TITLE_ALIASES[cleanTitle(title)] || cleanTitle(title)),
           description:stripHtml(item.description || item.content || ""),
           series:stripHtml(item.series || "") || inferSeries(item.description || item.content || "", title),
@@ -756,7 +758,7 @@
       }
     }
     function ensureValidYear() {
-      // 1~7년 이름은 항상 남겨둔다. 설교가 0개인 연도도 선택 가능하다.
+      // 1~7년 탭은 설교 데이터 유무와 관계없이 항상 선택할 수 있다.
       if (!Number.isInteger(state.selectedYear) || state.selectedYear < 1 || state.selectedYear > 7) {
         state.selectedYear = 1;
         localStorage.setItem(STORAGE.selectedYear, state.selectedYear);
@@ -793,7 +795,7 @@
       nav.textContent = "";
       for (let year=1; year<=7; year++) {
         const p = progress(yearItems(year));
-        const shownTotal = p.total;
+        const shownTotal = state.sermons.length >= 400 ? p.total : (EXPECTED_YEAR_COUNTS[year] || p.total);
         const btn = document.createElement("button");
         btn.className = `year-button ${year === state.selectedYear ? "active" : ""}`;
         btn.innerHTML = `<strong>${year}년</strong><small>${p.heard}/${shownTotal}</small>`;
@@ -810,12 +812,12 @@
     }
     function renderProgress() {
       const overall = progress(state.sermons);
-      const overallTotal = overall.total;
+      const overallTotal = state.sermons.length >= 400 ? overall.total : EXPECTED_TOTAL;
       $("#overallText").textContent = `${overall.heard} / ${overallTotal} 들음`;
       $("#overallBar").style.width = `${overallTotal ? overall.heard/overallTotal*100 : 0}%`;
 
       const yp = progress(yearItems(state.selectedYear));
-      const yearTotal = yp.total;
+      const yearTotal = state.sermons.length >= 400 ? yp.total : (EXPECTED_YEAR_COUNTS[state.selectedYear] || yp.total);
       $("#yearTitle").textContent = `${state.selectedYear}년`;
       $("#yearProgressText").textContent = `${yp.heard} / ${yearTotal} 들음`;
       $("#yearBar").style.width = `${yearTotal ? yp.heard/yearTotal*100 : 0}%`;
