@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#183b2a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="7년 말씀">
+  <title>7년 말씀</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f1e9;
+      --surface: rgba(255,255,255,.90);
+      --surface2: #ffffff;
+      --text: #1a1d1b;
+      --muted: #6f716c;
+      --line: rgba(20,28,23,.11);
+      --accent: #245d43;
+      --accent2: #dcebe1;
+      --accent3: #f0f6f2;
+      --danger: #a33c35;
+      --shadow: 0 10px 34px rgba(39,44,38,.08);
+      --radius: 18px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101310;
+        --surface: rgba(27,31,28,.92);
+        --surface2: #202521;
+        --text: #f3f4ef;
+        --muted: #a9aca6;
+        --line: rgba(255,255,255,.10);
+        --accent: #8dd0aa;
+        --accent2: #273d30;
+        --accent3: #17231b;
+        --danger: #ff9188;
+        --shadow: 0 10px 34px rgba(0,0,0,.28);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background:
+        radial-gradient(circle at 92% 0%, rgba(73,133,96,.16), transparent 32rem),
+        var(--bg);
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(17px, env(safe-area-inset-top)) 17px 13px;
+      background: color-mix(in srgb, var(--bg) 82%, transparent);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow { margin: 0 0 2px; color: var(--accent); font-size: 11px; font-weight: 900; letter-spacing: .10em; }
+    h1 { margin: 0; font-size: 21px; letter-spacing: -.04em; }
+    .icon-button { border: 0; background: transparent; color: var(--text); font-size: 24px; padding: 7px; }
+    main { max-width: 820px; margin: 0 auto; padding: 14px 13px calc(40px + env(safe-area-inset-bottom)); }
+    .card {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+    }
+    .overall { padding: 15px; }
+    .progress-copy { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+    .progress-copy strong { font-size: 17px; }
+    .progress-copy span { color: var(--muted); font-size: 11px; text-align: right; }
+    .trackbar { height: 7px; margin-top: 11px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .trackbar > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .25s ease; }
+    .notice { margin-top: 10px; padding: 13px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .notice b { color: var(--text); }
+    .notice .primary { margin-top: 9px; }
+    .year-nav {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(52px,1fr));
+      gap: 7px;
+      margin: 11px 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .year-nav::-webkit-scrollbar { display: none; }
+    .year-button {
+      min-width: 54px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 15px;
+      padding: 10px 4px 8px;
+      box-shadow: var(--shadow);
+    }
+    .year-button strong { display: block; font-size: 15px; }
+    .year-button small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .year-button.active { background: var(--accent); color: white; border-color: transparent; }
+    .year-button.active small { color: rgba(255,255,255,.76); }
+    .year-summary { padding: 14px; margin-bottom: 10px; }
+    .year-summary-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .year-summary h2 { margin: 0; font-size: 20px; }
+    .year-summary p { margin: 0; color: var(--muted); font-size: 12px; }
+    .controls {
+      position: sticky;
+      top: 82px;
+      z-index: 30;
+      padding: 9px;
+      margin-bottom: 10px;
+      backdrop-filter: blur(18px);
+    }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 11px;
+      background: var(--bg);
+      border-radius: 12px;
+    }
+    .search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); }
+    .tabs { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-top: 7px; }
+    .tab { border: 0; background: transparent; color: var(--muted); padding: 8px 2px; border-radius: 10px; }
+    .tab.active { background: var(--accent2); color: var(--accent); font-weight: 900; }
+    .category-list { display: grid; gap: 11px; }
+    .category { overflow: hidden; }
+    .category-head {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      padding: 15px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 11px;
+      align-items: center;
+      text-align: left;
+    }
+    .category-number {
+      min-width: 45px;
+      height: 45px;
+      border-radius: 13px;
+      background: var(--accent2);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .category-title { display: block; font-size: 17px; font-weight: 900; }
+    .category-meta { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .chevron { color: var(--muted); transition: transform .2s ease; }
+    .category.open > .category-head .chevron,
+    .group.open > .group-head .chevron { transform: rotate(180deg); }
+    .groups { display: none; padding: 0 10px 10px; border-top: 1px solid var(--line); }
+    .category.open > .groups { display: grid; gap: 8px; padding-top: 10px; }
+    .group {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface2) 92%, transparent);
+      border-radius: 14px;
+    }
+    .group-head {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 35px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      text-align: left;
+    }
+    .folder-number {
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--accent);
+      background: var(--accent3);
+      border-radius: 10px;
+      padding: 7px 3px;
+      text-align: center;
+    }
+    .group-title { display: block; font-size: 14px; font-weight: 850; line-height: 1.35; }
+    .group-meta { display: block; color: var(--muted); margin-top: 3px; font-size: 10px; }
+    .sermons { display: none; border-top: 1px solid var(--line); }
+    .group.open > .sermons { display: block; }
+    .sermon {
+      display: grid;
+      grid-template-columns: 33px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sermon:last-child { border-bottom: 0; }
+    .sermon-index { color: var(--muted); text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .sermon-title { font-size: 13px; line-height: 1.42; }
+    .sermon-sub { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .badge { padding: 2px 6px; border-radius: 999px; color: var(--accent); background: var(--accent2); font-weight: 800; }
+    .actions { display: flex; gap: 5px; }
+    .play, .heard {
+      min-width: 40px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      background: var(--surface2);
+      color: var(--text);
+      border-radius: 10px;
+    }
+    .heard.is-heard { color: white; background: var(--accent); border-color: transparent; }
+    .empty { text-align: center; color: var(--muted); padding: 35px 10px; }
+    .hidden { display: none !important; }
+    .primary, .setting-actions button, .file-button {
+      display: block;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 13px;
+      color: var(--text);
+      background: var(--surface2);
+      text-align: center;
+    }
+    .primary { background: var(--accent); border-color: transparent; color: white; font-weight: 900; }
+    .danger { color: var(--danger) !important; }
+    dialog { width: min(94vw,560px); border: 0; padding: 0; border-radius: 20px; background: transparent; }
+    dialog::backdrop { background: rgba(0,0,0,.46); backdrop-filter: blur(4px); }
+    .dialog-card { padding: 18px; background: var(--surface2); color: var(--text); border-radius: 20px; }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; }
+    .dialog-head h2 { margin: 0; }
+    .field { display: grid; gap: 6px; margin: 15px 0; }
+    .field span { color: var(--muted); font-size: 12px; }
+    .field input { width: 100%; padding: 11px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 11px; }
+    .setting-actions { display: grid; gap: 7px; }
+    .file-button input { display: none; }
+    details { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--line); }
+    summary { cursor: pointer; font-weight: 900; }
+    .instructions { color: var(--muted); font-size: 13px; line-height: 1.6; padding-left: 22px; }
+    .fineprint { color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      z-index: 80;
+      transform: translate(-50%,120px);
+      opacity: 0;
+      padding: 10px 14px;
+      background: #111;
+      color: white;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      transition: .24s ease;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translate(-50%,0); opacity: 1; }
+    @media (max-width: 620px) {
+      .year-nav { grid-template-columns: repeat(7, 58px); }
+      .controls { top: 80px; }
+      .sermon { grid-template-columns: 29px 1fr; }
+      .actions { grid-column: 2; justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">열린교회</p>
+      <h1>7년간 들어야 할 말씀</h1>
+    </div>
+    <button id="settingsButton" class="icon-button" aria-label="설정">⚙︎</button>
+  </header>
+
+  <main>
+    <section class="overall card">
+      <div class="progress-copy">
+        <strong id="overallText">0 / 0 들음</strong>
+        <span id="dataMode">목록 준비 중</span>
+      </div>
+      <div class="trackbar"><span id="overallBar"></span></div>
+    </section>
+
+    <section id="starterNotice" class="notice card hidden">
+      <b>네가 준 7년 목록을 불러오지 못했어.</b><br>
+      인터넷 연결을 확인한 뒤 아래 버튼을 누르면 같은 목록 주소로 다시 시도한다.
+      <button id="loadFullButton" class="primary">전체 목록 다시 확인</button>
+    </section>
+
+    <nav id="yearNav" class="year-nav" aria-label="연도 선택"></nav>
+
+    <section class="year-summary card">
+      <div class="year-summary-head">
+        <h2 id="yearTitle">1년</h2>
+        <p id="yearProgressText">0 / 0 들음</p>
+      </div>
+      <div class="trackbar"><span id="yearBar"></span></div>
+    </section>
+
+    <section class="controls card">
+      <label class="search">
+        <span>⌕</span>
+        <input id="searchInput" type="search" placeholder="현재 연도에서 설교 검색">
+      </label>
+      <div class="tabs">
+        <button class="tab active" data-filter="all">전체</button>
+        <button class="tab" data-filter="unheard">아직</button>
+        <button class="tab" data-filter="heard">들음</button>
+        <button class="tab" data-filter="repeat">반복</button>
+      </div>
+    </section>
+
+    <section id="categoryList" class="category-list" aria-live="polite"></section>
+    <p id="emptyState" class="empty hidden">이 조건에 맞는 설교가 없다.</p>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dialog-card">
+      <div class="dialog-head">
+        <h2>설정</h2>
+        <button class="icon-button" value="cancel" aria-label="닫기">×</button>
+      </div>
+
+      <label class="field">
+        <span>재생 단축어 이름</span>
+        <input id="shortcutName" type="text" value="설교 재생">
+      </label>
+
+      <div class="setting-actions">
+        <button id="refreshButton" type="button" class="primary">전체 목록 새로 고침</button>
+        <button id="exportButton" type="button">청취기록 내보내기</button>
+        <label class="file-button">청취기록 가져오기<input id="importInput" type="file" accept="application/json"></label>
+        <button id="resetButton" type="button" class="danger">들음 기록 전부 지우기</button>
+      </div>
+
+      <details>
+        <summary>단축어 구조</summary>
+        <ol class="instructions">
+          <li>단축어 이름: <b>설교 재생</b></li>
+          <li><b>음악 찾기</b>: 제목 → 다음을 포함 → 단축어 입력</li>
+          <li><b>목록에서 선택</b></li>
+          <li><b>음악 재생</b></li>
+        </ol>
+      </details>
+      <p class="fineprint">가상 목록과 들음 기록만 Safari 저장공간에 보관한다. 실제 음원은 기존 음악 앱에 그대로 있다.</p>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script>
+    window.SERMON_DATA = [{"title":"1년-기본-01-01.한사람의 죄(1)","series":"죄와 구원","description":"죄와 구원 1 - 한사람의 죄(1)","duration":"91분","pubDate":"2011-12-31T00:00:00+09:00"},{"title":"1년-기본-01-02.한사람의 죄(2)","series":"죄와 구원","description":"죄와 구원 2 - 한사람의 죄(2)","duration":"61분","pubDate":"2011-12-31T01:00:00+09:00"},{"title":"1년-기본-01-03.그리스도의 십자가와 속죄","series":"죄와 구원","description":"죄와 구원 3 - 그리스도의 십자가와 속죄","duration":"82분","pubDate":"2011-12-31T02:00:00+09:00"},{"title":"1년-기본-01-04.구원의 길","series":"죄와 구원","description":"죄와 구원 4 - 구원의 길","duration":"80분","pubDate":"2011-12-31T03:00:00+09:00"},{"title":"1년-기본-01-05.십자가 아래에서의 삶","series":"죄와 구원","description":"죄와 구원 5 - 십자가 아래에서의 삶","duration":"54분","pubDate":"2011-12-31T04:00:00+09:00"},{"title":"1년-기본-02-01.양의 목자","series":"목자와 양","description":"목자와 양 1 - 양의 목자","duration":"65분","pubDate":"2012-01-01T00:00:00+09:00"},{"title":"1년-기본-02-02.양과 목자의 음성","series":"목자와 양","description":"목자와 양 2 - 양과 목자의 음성","duration":"77분","pubDate":"2012-01-01T01:00:00+09:00"},{"title":"1년-기본-02-03.목자를 경험함","series":"목자와 양","description":"목자와 양 3 - 목자를 경험함","duration":"84분","pubDate":"2012-01-01T02:00:00+09:00"},{"title":"1년-기본-02-04.선한 목자가 오심은","series":"목자와 양","description":"목자와 양 4 - 선한 목자가 오심은","duration":"72분","pubDate":"2012-01-01T03:00:00+09:00"},{"title":"1년-기본-02-05.목자와 풍성한 삶","series":"목자와 양","description":"목자와 양 5 - 목자와 풍성한 삶","duration":"60분","pubDate":"2012-01-01T04:00:00+09:00"},{"title":"7년-상황-28-01.겸손과 눈물","series":"가르치는 자의 삶","description":"가르치는 자의 삶 1 - 겸손과 눈물","duration":"1시간 9분","pubDate":"2012-03-13T16:00:00+09:00"},{"title":"7년-상황-28-02.시험과 참음","series":"가르치는 자의 삶","description":"가르치는 자의 삶 2 - 시험과 참음","duration":"1시간 25분","pubDate":"2012-03-13T17:00:00+09:00"},{"title":"7년-상황-28-03.주님을 섬김","series":"가르치는 자의 삶","description":"가르치는 자의 삶 3 - 주님을 섬김","duration":"1시간 13분","pubDate":"2012-03-13T18:00:00+09:00"},{"title":"7년-상황-28-04.영혼의 유익을 위해서 살라","series":"가르치는 자의 삶","description":"가르치는 자의 삶 4 - 영혼의 유익을 위해서 살라","duration":"1시간 31분","pubDate":"2012-03-13T19:00:00+09:00"},{"title":"7년-상황-28-05.체험된 가르침으로","series":"가르치는 자의 삶","description":"가르치는 자의 삶 5 - 체험된 가르침으로","duration":"57분","pubDate":"2012-03-13T20:00:00+09:00"},{"title":"7년-상황-28-06.가르칠 내용을 체험하는 삶","series":"가르치는 자의 삶","description":"가르치는 자의 삶 6 - 가르칠 내용을 체험하는 삶","duration":"1시간 31분","pubDate":"2012-03-13T21:00:00+09:00"},{"title":"7년-상황-28-07.가르칠 내용(1) - 회개","series":"가르치는 자의 삶","description":"가르치는 자의 삶 7 - 가르칠 내용(1) - 회개","duration":"1시간 1분","pubDate":"2012-03-13T22:00:00+09:00"},{"title":"7년-상황-28-08.가르칠 내용(2) - 믿음","series":"가르치는 자의 삶","description":"가르치는 자의 삶 8 - 가르칠 내용(2) - 믿음","duration":"1시간 5분","pubDate":"2012-03-13T23:00:00+09:00"},{"title":"7년-상황-28-09.복음전도의 모범","series":"가르치는 자의 삶","description":"가르치는 자의 삶 9 - 복음전도의 모범","duration":"1시간 25분","pubDate":"2012-03-14T00:00:00+09:00"},{"title":"7년-상황-29-01.공급해 주시는 은혜에 감사함","series":"하나님께 감사하라 III","description":"하나님께 감사하라 III 1 - 공급해 주시는 은혜에 감사함","duration":"59분","pubDate":"2012-03-14T16:00:00+09:00"},{"title":"7년-상황-29-02.시련을 통과하게 하신 하나님께 감사하라","series":"하나님께 감사하라 III","description":"하나님께 감사하라 III 2 - 시련을 통과하게 하신 하나님께 감사하라","duration":"1시간 3분","pubDate":"2012-03-14T17:00:00+09:00"},{"title":"7년-상황-29-03.가장 감사할 제목","series":"하나님께 감사하라 III","description":"하나님께 감사하라 III 3 - 가장 감사할 제목","duration":"57분","pubDate":"2012-03-14T18:00:00+09:00"},{"title":"7년-상황-29-04.회복의 은혜에 감사함","series":"하나님께 감사하라 III","description":"하나님께 감사하라 III 4 - 회복의 은혜에 감사함","duration":"51분","pubDate":"2012-03-14T19:00:00+09:00"}];
+    window.SERMON_DATA_MODE = "starter";
+
+    const SOURCE_FEED = "https://feeds.feedburner.com/_7";
+    const SOURCE_SHOW = "https://fountain.fm/show/Ghd9kBuIOQz94khjE9Kh/episodes";
+    const STORAGE = {
+      data: "yullin7.data.v1",
+      heard: "yullin7.heard.v1",
+      settings: "yullin7.settings.v1",
+      selectedYear: "yullin7.selectedYear.v2",
+      openCategories: "yullin7.openCategories.v2",
+      openGroups: "yullin7.openGroups.v2"
+    };
+    const CATEGORY_ORDER = {"기본":1, "실천":2, "상황":3};
+    const CATEGORY_LABEL = {"기본":"기본", "실천":"실천", "상황":"상황"};
+    const PLAY_TITLE_ALIASES = {
+      "한사람의 죄(1)": "한-사람의-죄-1",
+      "한사람의 죄(2)": "한-사람의-죄-2"
+    };
+
+    const state = {
+      sermons: [],
+      heard: JSON.parse(localStorage.getItem(STORAGE.heard) || "{}"),
+      settings: Object.assign({shortcutName:"설교 재생"}, JSON.parse(localStorage.getItem(STORAGE.settings) || "{}")),
+      selectedYear: Number(localStorage.getItem(STORAGE.selectedYear) || 1),
+      filter: "all",
+      search: "",
+      openCategories: new Set(JSON.parse(localStorage.getItem(STORAGE.openCategories) || "[]")),
+      openGroups: new Set(JSON.parse(localStorage.getItem(STORAGE.openGroups) || "[]"))
+    };
+
+    const $ = (q) => document.querySelector(q);
+    const categoryList = $("#categoryList");
+    const emptyState = $("#emptyState");
+    const toast = $("#toast");
+
+    function escapeHtml(value="") {
+      return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    }
+    function stripHtml(value="") {
+      const doc = new DOMParser().parseFromString(String(value), "text/html");
+      return (doc.body.textContent || "").replace(/\s+/g," ").trim();
+    }
+    function cleanTitle(full="") {
+      return full.replace(/^\s*\d+년-[^-]+-\d+-\d+\s*[.\-]\s*/,"").trim();
+    }
+    function codeFromTitle(title="") {
+      const m = title.match(/^(\d+)년-([^-]+)-(\d+)-(\d+)/);
+      if (!m) return {year:99, category:"기타", group:999, track:999, code:title};
+      return {
+        year:Number(m[1]),
+        category:m[2].trim(),
+        group:Number(m[3]),
+        track:Number(m[4]),
+        code:`${m[1]}년-${m[2]}-${m[3]}-${m[4]}`
+      };
+    }
+    function inferSeries(description="", title="") {
+      const text = stripHtml(description);
+      const sermon = cleanTitle(title);
+      if (text) {
+        const escaped = sermon.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+        let group = text.replace(new RegExp(`\\s+\\d+\\s*-\\s*${escaped}\\s*$`),"").trim();
+        if (group === text) group = text.replace(/\s+\d+\s*-\s*.*$/,"").trim();
+        if (group && group.length < 100) return group;
+      }
+      const c = codeFromTitle(title);
+      return c.year === 99 ? "분류되지 않은 설교" : `${c.year}년 ${c.category} ${String(c.group).padStart(2,"0")}`;
+    }
+    function normalizeRepeat(value="") {
+      return cleanTitle(value).normalize("NFKC").toLowerCase()
+        .replace(/\s+/g,"")
+        .replace(/[()[\]{}.,·:;'"“”‘’!?~_\-–—]/g,"");
+    }
+    function durationText(raw="") {
+      const v = String(raw).trim();
+      if (!v) return "";
+      if (/^\d+$/.test(v)) {
+        const sec = Number(v);
+        const h = Math.floor(sec/3600);
+        const m = Math.floor((sec%3600)/60);
+        return h ? `${h}시간 ${m}분` : `${m}분`;
+      }
+      return v;
+    }
+    function prepare(items) {
+      const clean = items.map((item,index) => {
+        const title = stripHtml(item.title || "");
+        const code = codeFromTitle(title);
+        return {
+          id:String(item.guid || item.id || `${title}|${index}`),
+          title,
+          sermonTitle:cleanTitle(title),
+          playTitle:String(item.playTitle || PLAY_TITLE_ALIASES[cleanTitle(title)] || cleanTitle(title)),
+          description:stripHtml(item.description || item.content || ""),
+          series:stripHtml(item.series || "") || inferSeries(item.description || item.content || "", title),
+          duration:durationText(item.duration || item["itunes:duration"] || ""),
+          pubDate:item.pubDate || item.published || "",
+          code
+        };
+      }).filter(x => x.title && x.code.year >= 1 && x.code.year <= 7);
+
+      clean.sort((a,b) =>
+        a.code.year - b.code.year ||
+        (CATEGORY_ORDER[a.code.category] || 9) - (CATEGORY_ORDER[b.code.category] || 9) ||
+        a.code.group - b.code.group ||
+        a.code.track - b.code.track ||
+        String(a.pubDate).localeCompare(String(b.pubDate)) ||
+        a.title.localeCompare(b.title,"ko")
+      );
+
+      const yearCounts = {};
+      clean.forEach(x => {
+        yearCounts[x.code.year] = (yearCounts[x.code.year] || 0) + 1;
+        x.yearOrder = yearCounts[x.code.year];
+      });
+
+      const repeats = {};
+      clean.forEach(x => {
+        const key = normalizeRepeat(x.title);
+        if (key) (repeats[key] ||= []).push(x.id);
+      });
+      clean.forEach(x => x.repeatCount = (repeats[normalizeRepeat(x.title)] || []).length);
+      return clean;
+    }
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 2400);
+    }
+    async function loadInitial() {
+      $("#dataMode").textContent = "7년 전체 목록 정리 중…";
+      $("#starterNotice").classList.add("hidden");
+
+      const saved = localStorage.getItem(STORAGE.data);
+      if (saved) {
+        try {
+          const cached = prepare(JSON.parse(saved));
+          if (cached.length >= 400) {
+            state.sermons = cached;
+            $("#dataMode").textContent = `${state.sermons.length}개 목록 · 저장됨`;
+            ensureValidYear();
+            render();
+          }
+        } catch {}
+      }
+
+      try {
+        const items = await getFullList();
+        const prepared = prepare(items);
+        if (prepared.length < 400) throw new Error(`목록이 ${prepared.length}개`);
+        state.sermons = prepared;
+        localStorage.setItem(STORAGE.data, JSON.stringify(items));
+        $("#dataMode").textContent = `${state.sermons.length}개 목록 · 정리 완료`;
+        $("#starterNotice").classList.add("hidden");
+        ensureValidYear();
+        render();
+        return true;
+      } catch (error) {
+        console.error("full list load failed", error);
+      }
+
+      if (state.sermons.length >= 400) {
+        $("#dataMode").textContent = `${state.sermons.length}개 목록 · 저장본`;
+        return true;
+      }
+
+      state.sermons = prepare(window.SERMON_DATA || []);
+      $("#dataMode").textContent = `${state.sermons.length}개 임시 목록`;
+      $("#starterNotice").classList.remove("hidden");
+      ensureValidYear();
+      render();
+      return false;
+    }
+    function saveOpenState() {
+      localStorage.setItem(STORAGE.openCategories, JSON.stringify([...state.openCategories]));
+      localStorage.setItem(STORAGE.openGroups, JSON.stringify([...state.openGroups]));
+    }
+    async function fetchText(url, timeout=30000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          cache: "no-store",
+          headers: {"Accept":"application/rss+xml, application/xml, text/xml, text/plain, */*"}
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    function parseFeed(xmlText) {
+      const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+      if (xml.querySelector("parsererror")) throw new Error("RSS 해석 실패");
+      return [...xml.querySelectorAll("item")].map((item,index) => {
+        const read = (name) => {
+          const node = [...item.children].find(child => child.localName === name);
+          return node ? node.textContent.trim() : "";
+        };
+        return {
+          id:read("guid") || `${read("title")}|${index}`,
+          guid:read("guid"),
+          title:read("title"),
+          description:read("description"),
+          duration:read("duration"),
+          pubDate:read("pubDate")
+        };
+      });
+    }
+    function parseRss2Json(jsonText) {
+      const payload = JSON.parse(jsonText);
+      if (!Array.isArray(payload.items)) throw new Error("RSS JSON 목록 없음");
+      return payload.items.map((item,index) => ({
+        id:item.guid || item.link || `${item.title}|${index}`,
+        guid:item.guid || item.link || "",
+        title:item.title || "",
+        description:item.description || item.content || "",
+        duration:item.duration || item.itunes_duration || "",
+        pubDate:item.pubDate || ""
+      }));
+    }
+    function parseCodeLines(rawText) {
+      const decoded = rawText
+        .replace(/&amp;/g,"&")
+        .replace(/&lt;/g,"<")
+        .replace(/&gt;/g,">")
+        .replace(/&#39;/g,"'")
+        .replace(/&quot;/g,'"');
+      const regex = /([1-7]년-(?:기본|실천|상황)-\d{1,2}-\d{1,2}\.[^\n\r<]+)/g;
+      const found = new Map();
+      for (const match of decoded.matchAll(regex)) {
+        const title = match[1]
+          .replace(/\s+image\b.*$/i,"")
+          .replace(/\s+(?:Play|Listen Later).*$/i,"")
+          .replace(/\s{2,}.*$/,"")
+          .trim();
+        if (title && !found.has(title)) {
+          found.set(title, {
+            id:title,
+            guid:title,
+            title,
+            description:"",
+            duration:"",
+            pubDate:""
+          });
+        }
+      }
+      return [...found.values()];
+    }
+    async function getFullList() {
+      const encodedFeed = encodeURIComponent(SOURCE_FEED);
+      const encodedShow = encodeURIComponent(SOURCE_SHOW);
+      const attempts = [
+        async () => parseFeed(await fetchText(SOURCE_FEED)),
+        async () => parseFeed(await fetchText(`https://api.allorigins.win/raw?url=${encodedFeed}`)),
+        async () => {
+          const wrapper = JSON.parse(await fetchText(`https://api.allorigins.win/get?url=${encodedFeed}`));
+          return parseFeed(wrapper.contents || "");
+        },
+        async () => parseFeed(await fetchText(`https://corsproxy.io/?url=${encodedFeed}`)),
+        async () => parseFeed(await fetchText(`https://api.codetabs.com/v1/proxy?quest=${encodedFeed}`)),
+        async () => parseRss2Json(await fetchText(`https://api.rss2json.com/v1/api.json?rss_url=${encodedFeed}&count=1000`)),
+        async () => parseCodeLines(await fetchText(`https://r.jina.ai/http://feeds.feedburner.com/_7`)),
+        async () => parseCodeLines(await fetchText(`https://r.jina.ai/http://fountain.fm/show/Ghd9kBuIOQz94khjE9Kh/episodes`)),
+        async () => parseCodeLines(await fetchText(`https://api.allorigins.win/raw?url=${encodedShow}`))
+      ];
+      const failures = [];
+      for (const attempt of attempts) {
+        try {
+          const items = await attempt();
+          const valid = items.filter(item => /^[1-7]년-(?:기본|실천|상황)-\d+-\d+/.test(stripHtml(item.title || "")));
+          if (valid.length >= 400) return valid;
+          failures.push(`항목 ${valid.length}개`);
+        } catch (error) {
+          failures.push(String(error?.message || error));
+        }
+      }
+      throw new Error(failures.join(" / "));
+    }
+    async function updateFullList() {
+      $("#loadFullButton")?.setAttribute("disabled","");
+      $("#refreshButton")?.setAttribute("disabled","");
+      showToast("네가 준 7년 목록을 다시 정리하는 중…");
+      try {
+        const items = await getFullList();
+        const prepared = prepare(items);
+        if (prepared.length < 400) throw new Error(`목록이 ${prepared.length}개`);
+        localStorage.setItem(STORAGE.data, JSON.stringify(items));
+        state.sermons = prepared;
+        $("#dataMode").textContent = `${state.sermons.length}개 목록 · 정리 완료`;
+        $("#starterNotice").classList.add("hidden");
+        ensureValidYear();
+        render();
+        showToast(`${state.sermons.length}개를 연도·폴더 순서로 정리했어`);
+      } catch (e) {
+        console.error(e);
+        $("#starterNotice").classList.remove("hidden");
+        showToast("목록 연결이 막혔어. 잠시 뒤 다시 눌러줘.");
+      } finally {
+        $("#loadFullButton")?.removeAttribute("disabled");
+        $("#refreshButton")?.removeAttribute("disabled");
+      }
+    }
+    function ensureValidYear() {
+      const years = new Set(state.sermons.map(x => x.code.year));
+      if (!years.has(state.selectedYear)) {
+        state.selectedYear = [...years].sort((a,b)=>a-b)[0] || 1;
+        localStorage.setItem(STORAGE.selectedYear, state.selectedYear);
+      }
+    }
+    function toggleHeard(id) {
+      state.heard[id] = !state.heard[id];
+      if (!state.heard[id]) delete state.heard[id];
+      localStorage.setItem(STORAGE.heard, JSON.stringify(state.heard));
+      render();
+    }
+    function play(item) {
+      const shortcut = state.settings.shortcutName.trim() || "설교 재생";
+      location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcut)}&input=text&text=${encodeURIComponent(item.playTitle || item.sermonTitle)}`;
+    }
+    function itemMatchesFilter(item) {
+      const heard = !!state.heard[item.id];
+      if (state.filter === "heard" && !heard) return false;
+      if (state.filter === "unheard" && heard) return false;
+      if (state.filter === "repeat" && item.repeatCount < 2) return false;
+      const q = state.search.trim().toLowerCase();
+      if (q && !`${item.title} ${item.series} ${item.description}`.toLowerCase().includes(q)) return false;
+      return true;
+    }
+    function yearItems(year, filtered=false) {
+      return state.sermons.filter(x => x.code.year === year && (!filtered || itemMatchesFilter(x)));
+    }
+    function progress(items) {
+      const heard = items.filter(x => state.heard[x.id]).length;
+      return {heard, total:items.length, pct:items.length ? heard/items.length*100 : 0};
+    }
+    function renderYearNav() {
+      const nav = $("#yearNav");
+      nav.textContent = "";
+      for (let year=1; year<=7; year++) {
+        const p = progress(yearItems(year));
+        const btn = document.createElement("button");
+        btn.className = `year-button ${year === state.selectedYear ? "active" : ""}`;
+        btn.innerHTML = `<strong>${year}년</strong><small>${p.heard}/${p.total}</small>`;
+        btn.addEventListener("click", () => {
+          state.selectedYear = year;
+          localStorage.setItem(STORAGE.selectedYear, year);
+          state.search = "";
+          $("#searchInput").value = "";
+          render();
+          window.scrollTo({top:0, behavior:"smooth"});
+        });
+        nav.appendChild(btn);
+      }
+    }
+    function renderProgress() {
+      const overall = progress(state.sermons);
+      $("#overallText").textContent = `${overall.heard} / ${overall.total} 들음`;
+      $("#overallBar").style.width = `${overall.pct}%`;
+
+      const yp = progress(yearItems(state.selectedYear));
+      $("#yearTitle").textContent = `${state.selectedYear}년`;
+      $("#yearProgressText").textContent = `${yp.heard} / ${yp.total} 들음`;
+      $("#yearBar").style.width = `${yp.pct}%`;
+    }
+    function renderContent() {
+      const allYear = yearItems(state.selectedYear);
+      const visible = yearItems(state.selectedYear,true);
+      categoryList.textContent = "";
+      emptyState.classList.toggle("hidden", visible.length > 0);
+
+      const categories = [...new Set(allYear.map(x => x.code.category))]
+        .sort((a,b) => (CATEGORY_ORDER[a] || 9) - (CATEGORY_ORDER[b] || 9) || a.localeCompare(b,"ko"));
+
+      categories.forEach((category, catIndex) => {
+        const allCat = allYear.filter(x => x.code.category === category);
+        const visibleCat = visible.filter(x => x.code.category === category);
+        if (!visibleCat.length) return;
+
+        const catKey = `${state.selectedYear}|${category}`;
+        if (!localStorage.getItem(STORAGE.openCategories) && catIndex === 0) state.openCategories.add(catKey);
+        const catProgress = progress(allCat);
+
+        const section = document.createElement("article");
+        section.className = `category card ${state.openCategories.has(catKey) ? "open" : ""}`;
+
+        const head = document.createElement("button");
+        head.className = "category-head";
+        head.innerHTML = `
+          <span class="category-number">${String(catIndex+1).padStart(2,"0")}</span>
+          <span>
+            <span class="category-title">${escapeHtml(CATEGORY_LABEL[category] || category)}</span>
+            <span class="category-meta">${catProgress.heard}/${catProgress.total} 들음 · 설교 묶음 ${new Set(allCat.map(x=>x.code.group)).size}개</span>
+          </span>
+          <span class="chevron">⌄</span>`;
+        head.addEventListener("click", () => {
+          state.openCategories.has(catKey) ? state.openCategories.delete(catKey) : state.openCategories.add(catKey);
+          saveOpenState();
+          section.classList.toggle("open");
+        });
+
+        const groupsEl = document.createElement("div");
+        groupsEl.className = "groups";
+
+        const groupNumbers = [...new Set(visibleCat.map(x=>x.code.group))].sort((a,b)=>a-b);
+        groupNumbers.forEach((groupNumber, groupIndex) => {
+          const allGroup = allCat.filter(x => x.code.group === groupNumber).sort((a,b)=>a.code.track-b.code.track);
+          const visibleGroup = visibleCat.filter(x => x.code.group === groupNumber).sort((a,b)=>a.code.track-b.code.track);
+          const groupKey = `${state.selectedYear}|${category}|${groupNumber}`;
+          if (!localStorage.getItem(STORAGE.openGroups) && catIndex === 0 && groupIndex === 0) state.openGroups.add(groupKey);
+          const gp = progress(allGroup);
+          const title = allGroup[0]?.series || `${groupNumber}번 묶음`;
+
+          const group = document.createElement("section");
+          group.className = `group ${state.openGroups.has(groupKey) ? "open" : ""}`;
+          const groupHead = document.createElement("button");
+          groupHead.className = "group-head";
+          groupHead.innerHTML = `
+            <span class="folder-number">${String(groupNumber).padStart(2,"0")}</span>
+            <span>
+              <span class="group-title">${escapeHtml(title)}</span>
+              <span class="group-meta">${gp.heard}/${gp.total} 들음 · ${gp.total}편</span>
+            </span>
+            <span class="chevron">⌄</span>`;
+          groupHead.addEventListener("click", () => {
+            state.openGroups.has(groupKey) ? state.openGroups.delete(groupKey) : state.openGroups.add(groupKey);
+            saveOpenState();
+            group.classList.toggle("open");
+          });
+
+          const sermonsEl = document.createElement("div");
+          sermonsEl.className = "sermons";
+          visibleGroup.forEach(item => {
+            const row = document.createElement("div");
+            row.className = "sermon";
+            const sub = [];
+            if (item.duration) sub.push(`<span>${escapeHtml(item.duration)}</span>`);
+            if (item.repeatCount > 1) sub.push(`<span class="badge">반복 ${item.repeatCount}회</span>`);
+            row.innerHTML = `
+              <span class="sermon-index">${String(item.code.track).padStart(2,"0")}</span>
+              <div>
+                <div class="sermon-title">${escapeHtml(item.sermonTitle)}</div>
+                <div class="sermon-sub">${sub.join("")}</div>
+              </div>
+              <div class="actions">
+                <button class="play" aria-label="음악 앱에서 재생">▶</button>
+                <button class="heard ${state.heard[item.id] ? "is-heard" : ""}" aria-label="들음 상태 변경">${state.heard[item.id] ? "✓" : "□"}</button>
+              </div>`;
+            row.querySelector(".play").addEventListener("click", () => play(item));
+            row.querySelector(".heard").addEventListener("click", () => toggleHeard(item.id));
+            sermonsEl.appendChild(row);
+          });
+
+          group.append(groupHead, sermonsEl);
+          groupsEl.appendChild(group);
+        });
+
+        section.append(head, groupsEl);
+        categoryList.appendChild(section);
+      });
+    }
+    function render() {
+      ensureValidYear();
+      renderYearNav();
+      renderProgress();
+      renderContent();
+      saveOpenState();
+    }
+    function exportRecords() {
+      const payload = {exportedAt:new Date().toISOString(), heard:state.heard, settings:state.settings};
+      const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `7년말씀_청취기록_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function importRecords(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data.heard || typeof data.heard !== "object") throw new Error();
+          state.heard = data.heard;
+          state.settings = Object.assign(state.settings, data.settings || {});
+          localStorage.setItem(STORAGE.heard, JSON.stringify(state.heard));
+          localStorage.setItem(STORAGE.settings, JSON.stringify(state.settings));
+          $("#shortcutName").value = state.settings.shortcutName;
+          render();
+          showToast("청취기록을 가져옴");
+        } catch { showToast("올바른 기록 파일이 아님"); }
+      };
+      reader.readAsText(file);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      $("#shortcutName").value = state.settings.shortcutName;
+      render();
+      await loadInitial();
+
+      $("#searchInput").addEventListener("input", e => { state.search = e.target.value; renderContent(); });
+      document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+        btn.classList.add("active");
+        state.filter = btn.dataset.filter;
+        renderContent();
+      }));
+      $("#settingsButton").addEventListener("click", () => $("#settingsDialog").showModal());
+      $("#shortcutName").addEventListener("change", e => {
+        state.settings.shortcutName = e.target.value.trim() || "설교 재생";
+        localStorage.setItem(STORAGE.settings, JSON.stringify(state.settings));
+        showToast("단축어 이름을 저장함");
+      });
+      $("#loadFullButton").addEventListener("click", updateFullList);
+      $("#refreshButton").addEventListener("click", updateFullList);
+      $("#exportButton").addEventListener("click", exportRecords);
+      $("#importInput").addEventListener("change", e => e.target.files[0] && importRecords(e.target.files[0]));
+      $("#resetButton").addEventListener("click", () => {
+        if (confirm("들음 기록을 전부 지울까? 목록은 유지된다.")) {
+          state.heard = {};
+          localStorage.setItem(STORAGE.heard, "{}");
+          render();
+          showToast("들음 기록을 지움");
+        }
+      });
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then(registrations => registrations.forEach(registration => registration.unregister()))
+          .catch(()=>{});
+      }
+    });
+  </script>
+</body>
+</html>
