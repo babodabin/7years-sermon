@@ -183,11 +183,11 @@
         .toLocaleLowerCase("ko-KR")
         .replace(/[^0-9a-z가-힣]+/g,"");
     }
-    // 현재 iOS 단축어가 제목 끝의 1/2를 같은 검색어로 처리하는 경우가 있어
-    // 이 두 곡은 공통 제목으로 검색한 뒤 단축어의 "목록에서 선택"으로 고르게 한다.
+    // 화면 제목과 음악 앱의 실제 제목이 다른 항목만 정확히 연결한다.
+    // 1편/2편을 공통 검색어로 합치지 않아 서로 다른 곡으로 재생된다.
     const PLAY_ALIASES={
-      "1년-기본-01-01":"한-사람의-죄",
-      "1년-기본-01-02":"한-사람의-죄"
+      "1년-기본-01-01":"한-사람의-죄-1",
+      "1년-기본-01-02":"한-사람의-죄-2"
     };
     const CANONICAL_MUSIC_TITLES=new Map();
     Object.values(PLAY_ALIASES).forEach(title=>CANONICAL_MUSIC_TITLES.set(musicTitleKey(title),title));
